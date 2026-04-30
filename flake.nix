@@ -24,6 +24,7 @@
         in
         {
           jdownloader2 = pkgs.callPackage ./pkgs/jdownloader2 { };
+          siggy = pkgs.callPackage ./pkgs/siggy { };
         }
       );
 
