@@ -16,6 +16,7 @@
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in
     {
+      #### PACKAGES ####
       packages = forAllSystems (
         system:
         let
@@ -25,5 +26,13 @@
           jdownloader2 = pkgs.callPackage ./pkgs/jdownloader2 { };
         }
       );
+
+      #### FLAKE TEMPLATES ####
+      templates = {
+        f1tenth-dev = {
+          path = ./templates/f1tenth;
+          description = "Development and simulation environment for Ros2 F1Tenth";
+        };
+      };
     };
 }
