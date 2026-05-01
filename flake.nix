@@ -34,6 +34,11 @@
           path = ./templates/f1tenth;
           description = "Development and simulation environment for Ros2 F1Tenth";
         };
+        simple-typst = {
+          path = ./templates/typst/simple-typst;
+          description = "Simple Typst template with everything you need";
+        };
+
       };
     };
 }
