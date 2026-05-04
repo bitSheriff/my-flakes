@@ -34,6 +34,12 @@
           path = ./templates/f1tenth;
           description = "Development and simulation environment for Ros2 F1Tenth";
         };
+
+        # Python
+        jupyter-dev = {
+          path = ./templates/python/jupyter;
+          description = "A devShell for jupyter powered by uv";
+        };
       };
     };
 }
