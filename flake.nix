@@ -35,6 +35,12 @@
           description = "Development and simulation environment for Ros2 F1Tenth";
         };
 
+        # Typst
+        simple-typst = {
+          path = ./templates/typst/simple-typst;
+          description = "Simple Typst template with everything you need";
+        };
+
         # Python
         jupyter-dev = {
           path = ./templates/python/jupyter;
