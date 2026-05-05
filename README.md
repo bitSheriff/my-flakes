@@ -7,7 +7,7 @@
 ### Ros2 F1Tenth RoboRacer
 
 ```sh
-nix flake init -t codeberg:bitSheriff/my-flakes#f1tenth
+nix flake init -t git+https://codeberg.org/bitSheriff/my-flakes#f1tenth
 # or
 nix flake init -t github:bitSheriff/my-flakes#f1tenth
 ```
