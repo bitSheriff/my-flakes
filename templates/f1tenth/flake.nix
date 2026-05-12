@@ -57,6 +57,7 @@
         python3Packages.numpy
         python3Packages.scikit-image
         python3Packages.transforms3d
+        python313Packages.opencv4
 
       ];
 
@@ -233,6 +234,7 @@
                 lazygit
                 rsync
                 python3
+                uv
 
                 # Scripts
                 build_colcon
@@ -279,7 +281,19 @@
 
               # Set up nixGL and Mesa drivers
               export LIBGL_DRIVERS_PATH="${pkgs.mesa}/lib/dri"
-              export LD_LIBRARY_PATH="${nixGLDefault}/lib:${pkgs.mesa}/lib:$LD_LIBRARY_PATH"
+              export LD_LIBRARY_PATH="${nixGLDefault}/lib:${pkgs.mesa}/lib:${
+                pkgs.lib.makeLibraryPath [
+                  pkgs.stdenv.cc.cc.lib
+                  pkgs.glib
+                  pkgs.libGL
+                  pkgs.libxcb
+                  pkgs.xorg.libX11
+                  pkgs.xorg.libSM
+                  pkgs.xorg.libICE
+                  pkgs.xorg.libXext
+                  pkgs.zlib
+                ]
+              }:$LD_LIBRARY_PATH"
 
               # Add wrapped GUI tools to PATH
               export PATH="${rviz2_wrapped}/bin:${rqt_wrapped}/bin:$PATH"
