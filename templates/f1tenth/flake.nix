@@ -8,6 +8,20 @@
     nixgl.inputs.nixpkgs.follows = "nixpkgs";
   };
 
+  nixConfig = {
+    extra-experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    extra-substituters = [
+      "https://ros.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "ros.cachix.org-1:dSyZxI8geDCJrwgvCOHDoAfOm5sV1wCPjBkKL+38Rvo="
+    ];
+    max-jobs = 2;
+  };
+
   outputs =
     {
       self,
@@ -47,19 +61,22 @@
           nav2-controller
         ];
 
-      sharedRosPythonDependencies = with pkgs; [
-        # Python dependencies
-        python3
-        python3Packages.numpy
-        python3Packages.transforms3d
-        python3Packages.scikit-image
-        python3Packages.pip
-        python3Packages.numpy
-        python3Packages.scikit-image
-        python3Packages.transforms3d
-        python313Packages.opencv4
-
-      ];
+      sharedRosPythonDependencies =
+        pkgs: with pkgs; [
+          # Use Python 3.13 consistently
+          python313
+          python313Packages.numpy
+          python313Packages.transforms3d
+          python313Packages.scikit-image
+          python313Packages.pip
+          python313Packages.opencv4
+          python313Packages.numba
+          python313Packages.scipy
+          python313Packages.pyyaml
+          python313Packages.pyglet
+          python313Packages.pyopengl
+          python313Packages.pillow
+        ];
 
     in
     {
@@ -88,6 +105,7 @@
             src = ./.;
 
             dontUseCmakeConfigure = true;
+            dontWrapQtApps = true;
 
             nativeBuildInputs = [
               ros.ros-environment
@@ -102,23 +120,91 @@
             propagatedBuildInputs = [
             ]
             ++ (sharedRosPackages ros)
-            ++ (sharedRosPythonDependencies);
+            ++ (sharedRosPythonDependencies pkgs);
 
             buildPhase = ''
               export COLCON_EXTENSION_BLACKLIST=colcon_ros.prefix_path.ament
               export PYTHONPATH="${pkgs.python3Packages.setuptools}/${pkgs.python3.sitePackages}:$PYTHONPATH"
 
-              colcon build --install-base $out
-              colcon build --install-base $out --symlink-install --packages-select f1tenth_gym
-              colcon build --install-base $out --symlink-install --packages-select f1tenth_gym_ros
+              colcon build --install-base ./install
+              colcon build --install-base ./install --packages-select f1tenth_gym
+              colcon build --install-base ./install --packages-select f1tenth_gym_ros
             '';
 
             installPhase = ''
-              mkdir -p $out/bin
+              mkdir -p $out
+              cp -r ./install/* $out/
 
-              cp -r $src/install $out/
+              # Ensure launch and config are at the root as requested by Docker logic or previous structure
+              # But usually ROS expects them in share/<package>/
+              # We will keep them at $out/launch and $out/config for now to match previous attempt
               cp -r $src/launch $out/
               cp -r $src/config $out/
+            '';
+          };
+
+          docker = pkgs.dockerTools.buildLayeredImage {
+            name = "f1tenth-ros2-jazzy";
+            tag = "latest";
+            contents =
+              with pkgs;
+              [
+                bashInteractive
+                coreutils
+                git
+                tmux
+                vim
+                sudo
+                xterm
+                ros.ros-environment
+                ros.rviz2
+                ros.rqt-gui
+                ros.rqt-common-plugins
+                ros.rqt-reconfigure
+                ros.diagnostic-aggregator
+                ros.plotjuggler-ros
+              ]
+              ++ (sharedRosPackages ros)
+              ++ (sharedRosPythonDependencies pkgs)
+              ++ [ self.packages.${system}.default ];
+
+            config = {
+              Entrypoint = [ "${pkgs.bashInteractive}/bin/bash" ];
+              Cmd = [ ];
+              WorkingDir = "/arc2026/ws";
+              Env = [
+                "TERM=xterm-256color"
+                "SHELL=/bin/bash"
+                "ROS_DISTRO=jazzy"
+                "ROS_PYTHON_VERSION=3"
+              ];
+              User = "ros";
+            };
+
+            fakeRootCommands = ''
+              # Create the ros user
+              echo "ros:x:1000:1000:ROS User:/home/ros:/bin/bash" > ./etc/passwd
+              echo "ros:x:1000:" > ./etc/group
+              mkdir -p ./home/ros
+              chown 1000:1000 ./home/ros
+
+              # Set up tmux config matching the Dockerfile
+              printf "set -g mouse on\nset-option -g history-limit 100000\nset -g pane-border-format \"#{pane_index} #{pane_title}\"\nset -g pane-border-status bottom\n" > ./home/ros/.tmux.conf
+
+              # Set up .bashrc to source ROS environment
+              # We use a wildcard to find the setup.bash in the store path of our built package
+              printf "source /nix/store/*/setup.bash\n" >> ./home/ros/.bashrc
+
+              chown 1000:1000 ./home/ros/.tmux.conf ./home/ros/.bashrc
+
+              # Sudoers
+              mkdir -p ./etc/sudoers.d
+              echo "ros ALL=(root) NOPASSWD:ALL" > ./etc/sudoers.d/ros
+              chmod 0440 ./etc/sudoers.d/ros
+
+              # Setup the workspace directory structure
+              mkdir -p ./arc2026/ws
+              chown -R 1000:1000 ./arc2026
             '';
           };
         }
@@ -230,6 +316,7 @@
                 just
                 git
                 gum
+                gimp # to edit maps
                 tmux
                 lazygit
                 rsync
@@ -243,7 +330,7 @@
                 rqt_wrapped
               ]
               ++ (sharedRosPackages ros)
-              ++ (sharedRosPythonDependencies);
+              ++ (sharedRosPythonDependencies pkgs);
 
             ROS_DOMAIN_ID = 69;
 
