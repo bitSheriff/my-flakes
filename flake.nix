@@ -46,6 +46,11 @@
           path = ./templates/python/jupyter;
           description = "A devShell for jupyter powered by uv";
         };
+
+        pythonEnv = {
+          path = ./templates/python/simpleEnv;
+          description = "A devShell for python with integrated environment";
+        };
       };
     };
 }
